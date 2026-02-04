@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anatoly Coin</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --main-gold: #f39c12;
+            --dark-bg: #0a0a0a;
+            --panel-bg: #1c1c1c;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: white;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+        }
+
+        .screen {
+            flex: 1;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .active { display: flex; }
+
+        .score-container {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .currency-label {
+            color: #888;
+            font-size: 18px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .balance-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .coin-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .main-coin {
+            width: 260px;
+            height: 260px;
+            background: radial-gradient(circle, var(--main-gold), #d35400);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 120px;
+            font-weight: bold;
+            border: 10px solid #e67e22;
+            box-shadow: 0 0 40px rgba(243, 156, 18, 0.4);
+            cursor: pointer;
+            transition: transform 0.05s;
+            touch-action: manipulation;
+        }
+
+        .main-coin:active {
+            transform: scale(0.92);
+        }
+
+        .energy-section {
+            width: 100%;
+            max-width: 300px;
+            margin-bottom: 100px;
+        }
+
+        .energy-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .energy-bar {
+            width: 100%;
+            height: 12px;
+            background: #333;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        #energy-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f1c40f, #f39c12);
+            width: 100%;
+            transition: width 0.2s;
+        }
+
+        .menu-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .menu-item {
+            background: var(--panel-bg);
+            padding: 15px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .menu-item:active { opacity: 0.8; }
+        .item-info h4 { margin: 0; font-size: 16px; }
+        .item-info p { margin: 5px 0 0; color: #aaa; font-size: 13px; }
+        .price { color: var(--main-gold); font-weight: bold; }
+
+        .nav-bar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            background: rgba(28, 28, 28, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px;
+            border-radius: 20px;
+            border: 1px solid #333;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+        }
+
+        .nav-btn.active-nav { color: white; }
+
+        .tap-number {
+            position: absolute;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: floatUp 0.8s ease-out forwards;
+            z-index: 100;
+        }
+
+        @keyframes floatUp {
+            0% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-120px); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div id="main-screen" class="screen active">
+        <div class="score-container">
+            <div class="currency-label">Валюта Анатолий</div>
+            <div class="balance-value" id="balance">0</div>
+        </div>
+
+        <div class="coin-wrapper">
+            <div class="main-coin" id="coin">А</div>
+        </div>
+
+        <div class="energy-section">
+            <div class="energy-info">
+                <span>⚡ Энергия</span>
+                <span id="energy-text">1000 / 1000</span>
+            </div>
+            <div class="energy-bar">
+                <div id="energy-fill"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="boosts-screen" class="screen">
+        <h2>Магазин Бустов</h2>
+        <div class="menu-list">
+            <div class="menu-item" onclick="buyMultitap()">
+                <div class="item-info">
+                    <h4>Multitap</h4>
+                    <p>+1 к клику</p>
+                </div>
+                <div class="price" id="multitap-price">100</div>
+            </div>
+            <div class="menu-item" onclick="buyEnergyLimit()">
+                <div class="item-info">
+                    <h4>Energy Limit</h4>
+                    <p>+500 к макс. энергии</p>
+                </div>
+                <div class="price" id="energy-price">500</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="tasks-screen" class="screen">
+        <h2>Задания</h2>
+        <div class="menu-list">
+            <div class="menu-item" onclick="completeTask(1000, this, 'https://t.me/podilcliker')">
+                <div class="item-info">
+                    <h4>Подписка на Podil Cliker</h4>
+                    <p>Вступи в группу и получи бонус</p>
+                </div>
+                <div class="price">+1000 Анатолий</div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="nav-bar">
+        <div class="nav-btn active-nav" onclick="showScreen('main-screen', this)">
+            <span>🔘</span><span>Тап</span>
+        </div>
+        <div class="nav-btn" onclick="showScreen('tasks-screen', this)">
+            <span>📋</span><span>Задания</span>
+        </div>
+        <div class="nav-btn" onclick="showScreen('boosts-screen', this)">
+            <span>🚀</span><span>Бусты</span>
+        </div>
+    </nav>
+</div>
+
+<script>
+    let state = {
+        balance: 0,
+        energy: 1000,
+        maxEnergy: 1000,
+        clickValue: 1,
+        multitapCost: 100,
+        energyCost: 500
+    };
+
+    const tg = window.Telegram.WebApp;
+    tg.expand();
+
+    const balanceEl = document.getElementById('balance');
+    const energyFill = document.getElementById('energy-fill');
+    const energyText = document.getElementById('energy-text');
+    const coin = document.getElementById('coin');
+
+    coin.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        handleTap(touch.clientX, touch.clientY);
+    });
+
+    function handleTap(x, y) {
+        if (state.energy >= state.clickValue) {
+            state.balance += state.clickValue;
+            state.energy -= state.clickValue;
+            updateUI();
+            createAnim(x, y);
+            tg.HapticFeedback.impactOccurred('medium');
+        }
+    }
+
+    function createAnim(x, y) {
+        const el = document.createElement('div');
+        el.className = 'tap-number';
+        el.innerText = `+${state.clickValue}`;
+        el.style.left = `${x}px`;
+        el.style.top = `${y}px`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+    }
+
+    function buyMultitap() {
+        if (state.balance >= state.multitapCost) {
+            state.balance -= state.multitapCost;
+            state.clickValue += 1;
+            state.multitapCost *= 2;
+            document.getElementById('multitap-price').innerText = state.multitapCost;
+            updateUI();
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+    }
+
+    function buyEnergyLimit() {
+        if (state.balance >= state.energyCost) {
+            state.balance -= state.energyCost;
+            state.maxEnergy += 500;
+            state.energy += 500;
+            state.energyCost *= 2;
+            document.getElementById('energy-price').innerText = state.energyCost;
+            updateUI();
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+    }
+
+    function completeTask(reward, el, url) {
+        state.balance += reward;
+        updateUI();
+        el.style.display = 'none';
+        tg.openTelegramLink(url);
+        tg.HapticFeedback.notificationOccurred('success');
+    }
+
+    function updateUI() {
+        balanceEl.innerText = state.balance.toLocaleString();
+        const energyPerc = (state.energy / state.maxEnergy) * 100;
+        energyFill.style.width = `${energyPerc}%`;
+        energyText.innerText = `${Math.floor(state.energy)} / ${state.maxEnergy}`;
+    }
+
+    setInterval(() => {
+        if (state.energy < state.maxEnergy) {
+            state.energy = Math.min(state.energy + 1.5, state.maxEnergy);
+            updateUI();
+        }
+    }, 1000);
+
+    function showScreen(screenId, btn) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+        document.getElementById(screenId).classList.add('active');
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active-nav'));
+        btn.classList.add('active-nav');
+    }
+
+    updateUI();
+</script>
+</body>
+</html>
